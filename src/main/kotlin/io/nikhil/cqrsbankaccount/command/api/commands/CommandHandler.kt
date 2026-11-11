@@ -1,9 +1,7 @@
 package io.nikhil.cqrsbankaccount.command.api.commands
 
+import io.nikhil.cqrsbankaccount.core.commands.BaseCommand
+
 interface CommandHandler {
-    fun handle(command: OpenAccountCommand)
-    fun handle(command: DepositFundsCommand)
-    fun handle(command: WithdrawFundsCommand)
-    fun handle(command: CloseAccountCommand)
-    fun handle(command: RestoreReadDbCommand)
+    fun handle(command: BaseCommand)
 }

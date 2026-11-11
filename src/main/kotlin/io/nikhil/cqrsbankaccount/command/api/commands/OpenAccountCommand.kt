@@ -2,10 +2,11 @@ package io.nikhil.cqrsbankaccount.command.api.commands
 
 import io.nikhil.cqrsbankaccount.common.dtos.AccountType
 import io.nikhil.cqrsbankaccount.core.commands.BaseCommand
+import java.math.BigDecimal
 
 data class OpenAccountCommand(
-    var accountHolder: String? = null,
-    var accountType: AccountType? = null,
-    var openingBalance: Double? = 0.0,
-) : BaseCommand() {
-}
+    val accountHolder: String,
+    val accountType: AccountType,
+    val openingBalance: BigDecimal = BigDecimal.ZERO,
+    var accountId: String? = null,
+) : BaseCommand()

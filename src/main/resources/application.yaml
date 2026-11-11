@@ -1,3 +1,10 @@
 spring:
   application:
     name: cqrs-bank-account
+  data:
+    mongodb:
+      database: cqrs_bank_account
+app:
+  projection:
+    enabled: true
+    poll-interval-ms: 1000
