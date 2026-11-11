@@ -1,23 +1,37 @@
 # CQRS bank account
 
-A sample Kotlin/Spring Boot backend demonstrating Command Query Responsibility Segregation (CQRS), event sourcing, and Spring Integration. MongoDB stores the append-only account event stream and a separately updated account read model. Spring Integration `DirectChannel`s route commands to the command handler and polled events to the projection handler. Event appends are transactional; projections update asynchronously and can briefly lag behind accepted commands.
+A sample Kotlin/Spring Boot backend demonstrating CQRS, event sourcing, and Spring Integration. MongoDB stores account events separately from the account read model. Spring Integration routes commands and polled events; commands return after their events and idempotency receipts commit, while the read model is updated asynchronously and may briefly lag.
 
-## Run locally
+## Requirements and local setup
 
-Use Java 25 and a MongoDB replica set on `localhost:27017` (MongoDB transactions are not supported on a standalone server). For a local sample instance:
+- Java 25
+- Docker, for the MongoDB replica set used by this sample
+
+Start MongoDB in one terminal:
 
 ```shell
 docker run --name cqrs-mongo -p 27017:27017 mongo:8 --replSet rs0 --bind_ip_all
+```
+
+In another terminal, initialize the replica set:
+
+```shell
 docker exec cqrs-mongo mongosh --eval "rs.initiate()"
 ```
 
-Or configure `spring.data.mongodb.uri`, including the replica-set name.
+MongoDB transactions require a replica set; a standalone MongoDB server is not sufficient. The application uses the `cqrs_bank_account` database on `localhost:27017`. Set `spring.data.mongodb.uri` to use a different instance, including its replica-set name.
+
+Run the app:
 
 ```shell
-./gradlew bootRun
+# Windows
+.\gradlew.bat bootRun
+
+# Linux/macOS
+bash ./gradlew bootRun
 ```
 
-The API documentation is available at `http://localhost:8080/swagger-ui.html`.
+OpenAPI UI: <http://localhost:8080/swagger-ui/index.html>
 
 ## API
 
@@ -26,21 +40,43 @@ Open an account:
 ```http
 POST /api/v1/open-bank-account
 Content-Type: application/json
+Idempotency-Key: open-ada-001
 
 {"accountHolder":"Ada Lovelace","accountType":"SAVINGS","openingBalance":100.00}
 ```
-
-For safe client retries, send an `Idempotency-Key` header with every write request. Repeating the same key and payload returns the original result without appending another event; reusing a key with a different payload is rejected. Keys are optional, but retries without one are treated as new commands.
 
 Deposit or withdraw:
 
 ```http
 POST /api/v1/accounts/{id}/deposits
 Content-Type: application/json
+Idempotency-Key: deposit-ada-001
 
 {"amount":25.00}
 ```
 
-Use `/api/v1/accounts/{id}/withdrawals` for withdrawals. Read one account with `GET /api/v1/accounts/{id}`, list accounts with `GET /api/v1/accounts`, and close an account with `DELETE /api/v1/close-bank-account/{id}`. Accounts must have a zero balance before closure; amounts must be positive except for the non-negative opening balance.
+Use `/api/v1/accounts/{id}/withdrawals` for withdrawals. Read an account with `GET /api/v1/accounts/{id}`, list accounts with `GET /api/v1/accounts`, and close an account with `DELETE /api/v1/close-bank-account/{id}`. All three write operations accept an optional `Idempotency-Key` header.
 
-Commands append versioned events and an idempotency receipt to MongoDB in one transaction. The unique `(aggregateIdentifier, version)` index and expected-version check prevent concurrent writes from silently overwriting one another; each event append and receipt either commit together or roll back. The event log is the durable source for a scheduled projection worker, which retries failed accounts on later polls. The read model records the last applied event version in the same document as the balance: duplicate deliveries are ignored, and out-of-order events are rejected for retry instead of corrupting the balance. A read immediately after a successful command may therefore briefly return the previous projection. Mongo transactions require a replica set and do not include the asynchronously updated read model.
+### Idempotency keys
+
+The client creates a unique opaque key (for example, a UUID) for each logical write and reuses that key with the exact same request if retrying after a timeout or uncertain response. A repeated key and payload returns the original result without appending another event. Reusing the key with a different operation or payload is rejected. Keys are optional; requests without one are treated as new commands on every attempt. Receipts are stored in MongoDB and currently have no expiry.
+
+### Account rules and consistency
+
+Amounts use decimal values, not floating-point numbers. Opening balances must be non-negative; deposits and withdrawals must be positive. Accounts can only be closed at a zero balance. Invalid requests return `400`, missing accounts return `404`, and business-rule conflicts (including a key reused with a different payload) return `409`.
+
+Each command's versioned events and idempotency receipt are committed in one MongoDB transaction. A unique `(aggregateIdentifier, version)` index and expected-version check protect the event stream from conflicting writes. MongoDB transactions do not include the read model: a scheduled projection worker reads the event log, and retries failed accounts on later polls. The read model stores the last applied event version with the account data, so duplicate deliveries are ignored and version gaps are retried instead of corrupting the balance. A read immediately after a successful command may therefore briefly return the previous projection.
+
+## Tests and CI
+
+Run tests locally:
+
+```shell
+# Windows
+.\gradlew.bat test
+
+# Linux/macOS
+bash ./gradlew test --no-daemon
+```
+
+GitHub Actions runs this test suite for pull requests targeting `main` and for pushes to `main`, using Java 25.
