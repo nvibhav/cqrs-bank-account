@@ -20,6 +20,7 @@ import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.mongodb.MongoDBContainer
 import java.math.BigDecimal
+import java.time.Duration
 import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -174,7 +175,9 @@ class MongoPersistenceTests {
     companion object {
         @Container
         @JvmField
-        val mongo = MongoDBContainer("mongo:8").withReplicaSet()
+        val mongo = MongoDBContainer("mongo:8")
+            .withReplicaSet()
+            .withStartupTimeout(Duration.ofMinutes(2))
 
         @JvmStatic
         @DynamicPropertySource
