@@ -19,7 +19,7 @@ In another terminal, initialize the replica set:
 docker exec cqrs-mongo mongosh --eval "rs.initiate()"
 ```
 
-MongoDB transactions require a replica set; a standalone MongoDB server is not sufficient. The application uses the `cqrs_bank_account` database on `localhost:27017`. Set `spring.data.mongodb.uri` to use a different instance, including its replica-set name.
+MongoDB transactions require a replica set; a standalone MongoDB server is not sufficient. The application uses the `cqrs_bank_account` database on `localhost:27017`. Set `spring.mongodb.uri` to use a different instance, including its replica-set name.
 
 Run the app:
 
@@ -79,4 +79,4 @@ Run tests locally:
 bash ./gradlew test --no-daemon
 ```
 
-GitHub Actions runs this test suite for pull requests targeting `main` and for pushes to `main`, using Java 25.
+The Mongo persistence integration tests start a MongoDB replica set with Testcontainers. They verify event and receipt persistence, idempotency, expected-version checks, and idempotent projection updates. They run when Docker is available and are skipped otherwise. GitHub Actions runs the complete test suite for pull requests targeting `main` and for pushes to `main`, using Java 25 and Docker.
