@@ -16,7 +16,6 @@ import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.data.mongodb.core.query.Query
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
-import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.mongodb.MongoDBContainer
@@ -175,9 +174,9 @@ class MongoPersistenceTests {
     companion object {
         @Container
         @JvmField
-        val mongo = MongoDBContainer("mongo:8.3.13")
+        val mongo = MongoDBContainer("mongo:8.0.17")
             .withReplicaSet()
-            .waitingFor(Wait.forListeningPort())
+            .withCommand("--replSet", "docker-rs", "--wiredTigerCacheSizeGB", "0.25")
 
         @JvmStatic
         @DynamicPropertySource
