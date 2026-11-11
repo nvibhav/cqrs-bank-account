@@ -10,12 +10,14 @@ import io.nikhil.cqrsbankaccount.query.api.models.AccountView
 import io.nikhil.cqrsbankaccount.query.api.projections.AccountProjection
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.data.mongodb.core.query.Query
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
+import org.testcontainers.containers.output.Slf4jLogConsumer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.mongodb.MongoDBContainer
@@ -178,6 +180,7 @@ class MongoPersistenceTests {
         val mongo = MongoDBContainer("mongo:8")
             .withReplicaSet()
             .withStartupTimeout(Duration.ofMinutes(2))
+            .withLogConsumer(Slf4jLogConsumer(LoggerFactory.getLogger("MongoDB Testcontainer")))
 
         @JvmStatic
         @DynamicPropertySource
